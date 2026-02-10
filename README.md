@@ -2,8 +2,9 @@
 
 **Cryptographic integrity check. Runs 100% offline in your browser.**
 
-### Quick Start
-1. Download or view: https://brettscode-711.github.io/cautio-verifier/
+## Quick Start
+* **Live Verifier:** [https://cautioprotocol.github.io/cautio-verifier/](https://cautioprotocol.github.io/cautio-verifier/)
+* **Local Use:** Open `index.html` in any browser (Chrome, Safari, Firefox)
 2. Open verifier.html in any browser (Chrome, Safari, Firefox)
 3. Drag & drop a .proof.json file
 4. See instant VALID / INVALID result + Merkle path
