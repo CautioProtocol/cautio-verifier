@@ -6,9 +6,9 @@
     <title>Cautio Verifier | Enterprise Trust Layer</title>
     <style>
         :root { --primary: #0f172a; --accent: #3b82f6; --success: #10b981; --error: #ef4444; --bg: #f8fafc; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--primary); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
         
-        .container { background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); width: 480px; text-align: center; border: 1px solid #e2e8f0; }
+        .container { background: white; padding: 3rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); width: 100%; max-width: 480px; text-align: center; border: 1px solid #e2e8f0; }
         
         h2 { margin: 0 0 0.5rem 0; font-size: 1.5rem; letter-spacing: -0.02em; }
         p { color: #64748b; margin-bottom: 2rem; font-size: 0.95rem; }
@@ -32,9 +32,14 @@
         .valid { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .invalid { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
         
-        .details { margin-top: 1rem; text-align: left; font-size: 0.85rem; color: #64748b; display: none; border-top: 1px solid #f1f5f9; padding-top: 1rem; }
-        .details div { margin-bottom: 6px; display: flex; justify-content: space-between; }
+        .details { margin-top: 1.5rem; text-align: left; font-size: 0.85rem; color: #64748b; display: none; border-top: 1px solid #f1f5f9; padding-top: 1.5rem; }
+        .details div { margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
         .details code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #334155; font-family: monospace; font-size: 0.8em; }
+        
+        /* Failure Specific Styles */
+        .error-block { text-align: left; background: #fff1f2; padding: 1rem; border-radius: 8px; border: 1px solid #fecaca; margin-top: 1rem; }
+        .error-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #991b1b; margin-bottom: 4px; font-weight: 700; }
+        .error-hash { font-family: monospace; word-break: break-all; font-size: 0.8rem; color: #7f1d1d; background: white; padding: 8px; border: 1px solid #fca5a5; border-radius: 4px; margin-bottom: 12px; }
         
         footer { margin-top: 2rem; font-size: 0.75rem; color: #94a3b8; }
     </style>
@@ -120,35 +125,47 @@
                 try {
                     proof = JSON.parse(text);
                 } catch (e) {
-                    throw new Error("Invalid JSON file format.");
+                    throw new Error("Invalid JSON file format. File is corrupted.");
                 }
 
-                if (!proof.root) throw new Error("Missing Root Hash.");
-                if (!proof.file_content) throw new Error("Missing File Content (Verification Impossible).");
+                if (!proof.root) throw new Error("Missing Root Hash in proof file.");
+                if (!proof.file_content) throw new Error("Missing File Content. Verification impossible.");
 
                 // --- THE BRAIN (REAL CRYPTOGRAPHY) ---
-                // 1. Decode the content
                 const dataBuffer = base64ToArrayBuffer(proof.file_content);
-                
-                // 2. Hash it (SHA-256)
                 const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
                 const calculatedHash = bufferToHex(hashBuffer);
 
-                // 3. Compare (The Forensic Check)
-                // Note: In a full Merkle tree, we would hash up the path. 
-                // For this demo (proof=[]), the content hash MUST match the root directly.
+                // --- FORENSIC CHECK ---
                 if (calculatedHash !== proof.root) {
-                    throw new Error("TAMPER DETECTED: Content hash does not match Root Hash.");
+                    // Mismatch Detected - Show Forensic Report
+                    verifyingText.style.display = 'none';
+                    result.innerHTML = "❌ &nbsp; VERIFICATION FAILED";
+                    result.className = "status invalid show";
+                    
+                    details.style.display = 'block';
+                    details.innerHTML = `
+                        <div style="margin-bottom:12px; font-weight:600; color:#7f1d1d; display:block;">⚠️ TAMPERING DETECTED</div>
+                        
+                        <div class="error-block">
+                            <div class="error-label">Expected Hash (Signed by Timestamp):</div>
+                            <div class="error-hash">${proof.root}</div>
+                            
+                            <div class="error-label">Calculated Hash (Actual Content):</div>
+                            <div class="error-hash">${calculatedHash}</div>
+                            
+                            <div style="font-size:0.8rem; color:#991b1b; margin-top:8px;">
+                                <strong>Conclusion:</strong> The file content does not match the timestamped record. The data has been altered.
+                            </div>
+                        </div>
+                    `;
+                    return;
                 }
                 
-                // --- METADATA DISPLAY ---
-                const algo = proof.algorithm || "SHA-256";
-                let filename = "Verified Record";
-                if (proof.filename) filename = proof.filename;
-                else if (proof.target && proof.target.file) filename = proof.target.file;
-                else if (proof.file_content) filename = "Raw Data Record"; 
-
                 // --- SUCCESS ---
+                const algo = proof.algorithm || "SHA-256";
+                let filename = proof.filename || "Raw Data Record";
+
                 verifyingText.style.display = 'none';
                 result.innerHTML = "✅ &nbsp; VALID INTEGRITY PROOF";
                 result.className = "status valid show";
@@ -158,17 +175,20 @@
                     <div><span>Asset:</span> <strong>${filename}</strong></div>
                     <div><span>Root Hash:</span> <code>${proof.root.substring(0, 16)}...</code></div>
                     <div><span>Algorithm:</span> <code>${algo.toUpperCase()}</code></div>
-                    <div style="margin-top:8px; color:#166534; font-size:0.8em;">Timestamp Verified • No Tampering Detected</div>
+                    <div style="margin-top:12px; color:#166534; font-size:0.8em; text-align:center; display:block; width:100%;">
+                        Timestamp Verified • No Tampering Detected
+                    </div>
                 `;
+
             } catch (err) {
-                // --- FAILURE ---
+                // --- GENERIC ERROR (JSON/Format) ---
                 verifyingText.style.display = 'none';
-                result.innerHTML = "❌ &nbsp; VERIFICATION FAILED";
+                result.innerHTML = "⚠️ &nbsp; ERROR";
                 result.className = "status invalid show";
                 details.style.display = 'block';
                 details.innerHTML = `
-                    <div style="color: #991b1b; display:block; margin-bottom: 5px;"><strong>Critical Failure:</strong></div>
-                    <div style="display:block;">${err.message}</div>
+                    <div style="color: #991b1b; display:block; margin-bottom: 5px;"><strong>Analysis Failed:</strong></div>
+                    <div style="display:block; color: #7f1d1d;">${err.message}</div>
                 `;
             }
         }
