@@ -257,7 +257,7 @@
         </div>
         <div class="actions">
           <button id="downloadReport" class="btn">Export Report (PDF)</button>
-          <button id="resetBtn" class="btn btn-secondary" type="button">Verify Another File</button>
+          <button id="resetBtn" class="btn btn-secondary" type="button">Verify Another Proof</button>
         </div>
       </div>
     </div>
@@ -693,15 +693,16 @@
       doc.rect(0, 0, w, doc.internal.pageSize.getHeight(), 'F');
       doc.setFont('courier', 'bold');
       doc.setFontSize(22);
-      if (isValid) { doc.setTextColor(0, 255, 157); doc.text('TSA Verified • DigiCert RFC 3161 • Cautio Verification Certificate', 20, 24); }
+      if (isValid) { doc.setTextColor(0, 255, 157); doc.text('TSA Verified • DigiCert RFC 3161 • Cautio Verification Certificate', w / 2, 24, { align: 'center' }); }
       else { doc.setTextColor(255, 77, 79); doc.text('Cautio FAILURE REPORT', 20, 24); }
       doc.setFont('courier', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(230, 237, 243);
       var y = 34;
-      doc.text('Generated: ' + ts, 20, y); y += 7;
-      doc.text('Verified Proof File: ' + (state.fileName || 'proof.json'), 20, y); y += 7;
-      doc.text('Hash Algorithm: ' + (state.hashAlgorithm || 'Keccak-256'), 20, y); y += 10;
+      doc.text('Generated: ' + ts, 20, y); y += 8;
+      doc.text('Verified Proof File: ' + (state.fileName || 'proof.json'), 20, y); y += 8;
+      doc.text('Hash Algorithm: ' + (state.hashAlgorithm || 'Keccak-256'), 20, y); y += 8;
+      y += 6;
       doc.setFontSize(24);
       doc.setFont('courier', 'bold');
       if (isValid) { doc.setTextColor(0, 255, 157); doc.text('Status: AUTHENTIC', w / 2, y + 6, { align: 'center' }); }
