@@ -1,4 +1,5 @@
 Cautio Verifier
+
 The Gold Standard for Forensic Data Integrity
 The Cautio Verifier is a high-integrity, client-side application designed to validate Merkle inclusion proofs. It provides an immutable "Proof of Existence" and "Proof of Integrity" by anchoring data to global Time Stamping Authorities (TSA).
 
