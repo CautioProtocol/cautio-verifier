@@ -6,7 +6,7 @@
   <title>Cautio Verifier</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto+Mono:wght@400;600&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <style>
@@ -65,8 +65,10 @@
       background: rgba(255,255,255,0.02);
       transition: border-color 180ms ease, background 180ms ease;
     }
+    .drop-zone { transition: opacity 300ms ease; }
     .drop-zone:hover { border-color: var(--cyan); background: rgba(0, 212, 255, 0.05); }
     .drop-zone.dragover { border-color: var(--cyan); background: rgba(0, 212, 255, 0.08); }
+    .card:has(.result.show) .drop-zone { opacity: 0; pointer-events: none; }
     .drop-title { font-weight: 600; font-size: 14px; }
     .drop-sub { margin-top: 8px; font-size: 12px; color: var(--muted2); }
     .file-pill {
@@ -84,8 +86,9 @@
     }
     .file-pill code { font-family: var(--mono); font-size: 12px; color: rgba(255,255,255,0.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 360px; }
     .hidden { display: none !important; }
-    .result { margin-top: 20px; opacity: 0; transform: translateY(8px); transition: opacity 400ms ease, transform 400ms ease; display: none; }
+    .result { margin-top: 20px; opacity: 0; transform: translateY(8px); transition: opacity 300ms ease, transform 400ms ease; display: none; }
     .result.show { display: block; opacity: 1; transform: translateY(0); }
+    .result.fade-out { opacity: 0; }
     .status-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 4px; }
     .pill {
       display: inline-flex;
@@ -100,10 +103,10 @@
       border: 1px solid rgba(255,255,255,0.12);
       background: rgba(255,255,255,0.04);
     }
-    .pill.verified { border-color: rgba(0, 255, 157, 0.4); color: var(--green); background: rgba(0, 255, 157, 0.08); animation: pulse-verified 1.5s ease-in-out infinite; }
+    .pill.verified { border-color: rgba(0, 255, 157, 0.35); color: #fff; background: var(--green); animation: pulse-verified 1.5s ease-in-out infinite; }
     .pill.tamper { border-color: rgba(255, 77, 79, 0.5); color: var(--red); background: rgba(255, 77, 79, 0.1); }
     @keyframes pulse-verified { 0%, 100% { transform: scale(1.02); } 50% { transform: scale(1); } }
-    .status-msg { color: var(--muted); font-size: 12px; }
+    .status-msg { color: var(--muted); font-size: 14px; }
     .error-banner {
       margin-top: 14px;
       border-radius: 12px;
@@ -119,7 +122,8 @@
     .kv-row { display: grid; grid-template-columns: 140px 1fr; gap: 12px; align-items: start; }
     .kv-key { color: var(--muted2); font-size: 12px; }
     .kv-val { color: rgba(255,255,255,0.88); font-size: 12px; min-width: 0; }
-    .code { font-family: var(--mono); font-size: 11px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,0.9); }
+    .code { font-size: 11px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,0.9); }
+    .code .hash { font-family: 'Roboto Mono', monospace; }
     .code.mismatch { border-color: rgba(255, 77, 79, 0.4); background: rgba(255, 77, 79, 0.08); }
     .section { margin-top: 20px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); }
     .section-title { font-size: 12px; color: var(--muted2); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
@@ -133,10 +137,11 @@
     .panel { border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); overflow: hidden; }
     .panel-title { font-size: 11px; color: rgba(255,255,255,0.7); padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); }
     .panel.computed .panel-title { background: rgba(255, 77, 79, 0.08); }
-    .hash-block { font-family: var(--mono); font-size: 11px; padding: 10px; line-height: 1.5; word-break: break-all; color: rgba(255,255,255,0.88); background: rgba(0,0,0,0.2); min-height: 60px; }
-    .hash-block.computed { background: rgba(255, 77, 79, 0.08); }
+    .panel.expected .hash-block { background: #2d2d2d; }
+    .panel.computed .hash-block { background: #442a2a; }
+    .hash-block { font-family: 'Roboto Mono', monospace; font-size: 11px; padding: 10px; line-height: 1.5; word-break: break-all; color: rgba(255,255,255,0.88); background: rgba(0,0,0,0.2); min-height: 60px; }
     .diff { color: rgba(255,255,255,0.9); }
-    .diff.bad { color: var(--red); background: rgba(255, 77, 79, 0.2); border-radius: 2px; padding: 0 1px; }
+    .diff-mismatch { color: #ff8080; background: #661a1a; border-radius: 2px; padding: 0 1px; }
     .conclusion { margin-top: 12px; color: rgba(255,255,255,0.85); font-size: 12px; }
     .conclusion strong { color: rgba(255,255,255,0.95); }
     .merkle-viz { margin-top: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.15); padding: 12px; }
@@ -195,7 +200,7 @@
         <div id="loadedFileName" class="file-pill hidden"><span>Loaded</span><code id="loadedFileCode"></code></div>
       </div>
 
-      <div id="resultsCard" class="result">
+      <div id="resultsCard" class="result" aria-live="polite" role="status">
         <div class="status-row">
           <div id="statusPill" class="pill">VERIFYING</div>
           <div id="statusText" class="status-msg"></div>
@@ -240,7 +245,7 @@
           <div id="merkleViz" class="merkle-viz"></div>
         </div>
         <div class="actions">
-          <button id="downloadReport" class="btn">Export Verification Report</button>
+          <button id="downloadReport" class="btn">Export Report (PDF)</button>
           <button id="resetBtn" class="btn btn-secondary" type="button">Verify Another File</button>
         </div>
       </div>
@@ -296,11 +301,22 @@
     if (s.length <= head + tail + 3) return s;
     return s.slice(0, head) + '…' + s.slice(-tail);
   }
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
   function setCode(el, hex, opts) {
     opts = opts || {};
     const s = normalizeHex(hex);
-    el.textContent = s ? truncateMiddle(s, 14, 14) : (opts.missingText || '—');
-    el.title = s || '';
+    const display = s ? truncateMiddle(s, 8, 6) : (opts.missingText || '—');
+    if (s) {
+      el.innerHTML = '<span class="hash" title="' + escapeHtml(s) + '">' + escapeHtml(display) + '</span>';
+    } else {
+      el.textContent = display;
+      el.removeAttribute('title');
+    }
     el.classList.toggle('mismatch', !!opts.mismatch);
   }
   function renderDiff(expectedHex, computedHex) {
@@ -312,8 +328,9 @@
       const ca = a[i] || ' ';
       const cb = b[i] || ' ';
       const bad = ca !== cb;
-      outA += bad ? '<span class="diff bad">' + ca + '</span>' : '<span class="diff">' + ca + '</span>';
-      outB += bad ? '<span class="diff bad">' + cb + '</span>' : '<span class="diff">' + cb + '</span>';
+      const span = bad ? 'diff-mismatch' : 'diff';
+      outA += '<span class="' + span + '">' + escapeHtml(ca) + '</span>';
+      outB += '<span class="' + span + '">' + escapeHtml(cb) + '</span>';
     }
     return { outA: outA, outB: outB };
   }
@@ -321,7 +338,7 @@
     statusText.textContent = message || '';
     statusPill.className = 'pill';
     appCard.classList.toggle('state-invalid', mode === 'invalid');
-    if (mode === 'valid') { statusPill.textContent = 'VERIFIED'; statusPill.classList.add('verified'); }
+    if (mode === 'valid') { statusPill.textContent = 'AUTHENTIC'; statusPill.classList.add('verified'); }
     else if (mode === 'invalid') { statusPill.textContent = 'TAMPERING DETECTED'; statusPill.classList.add('tamper'); }
     else { statusPill.textContent = 'VERIFYING'; }
   }
@@ -545,7 +562,7 @@
         }
         var valid = result.valid;
         state = { proof: json, valid: valid, leafHash: leafHash, root: rootHex, computedRoot: result.computedRoot, steps: result.steps, fileName: file.name, error: valid ? null : ERR_ROOT_MISMATCH, largeFile: state.largeFile, parsedSuccessfully: true, hashAlgorithm: state.hashAlgorithm };
-        if (valid) { setStatus('valid', 'Integrity verified'); setErrorBanner(null); }
+        if (valid) { setStatus('valid', 'Integrity Confirmed'); setErrorBanner(null); }
         else { setStatus('invalid', 'Root mismatch'); setErrorBanner(state.error); }
         setCode(expectedRootCode, state.root);
         setCode(computedRootCode, state.computedRoot, { mismatch: !valid });
@@ -604,22 +621,25 @@
   });
 
   resetBtn.addEventListener('click', function() {
-    state = { proof: null, valid: false, leafHash: null, root: null, computedRoot: null, steps: [], fileName: '', error: null, largeFile: false, parsedSuccessfully: false, hashAlgorithm: 'Keccak-256' };
-    appCard.classList.remove('state-invalid');
-    dropZoneText.textContent = 'Drop proof.json here or click to browse';
-    loadedFileCode.textContent = '';
-    loadedFileName.classList.add('hidden');
-    setErrorBanner(null);
-    setCode(expectedRootCode, null);
-    setCode(computedRootCode, null, { missingText: '— (failed to compute)' });
-    updateCompare(null, null, false);
-    largeFileWarning.classList.remove('show');
-    previewTruncatedBanner.classList.remove('show');
-    preview.textContent = '';
-    merkleViz.innerHTML = '';
-    merkleViz.classList.remove('invalid', 'valid');
-    resultsCard.classList.remove('show');
-    input.value = '';
+    resultsCard.classList.add('fade-out');
+    setTimeout(function() {
+      state = { proof: null, valid: false, leafHash: null, root: null, computedRoot: null, steps: [], fileName: '', error: null, largeFile: false, parsedSuccessfully: false, hashAlgorithm: 'Keccak-256' };
+      appCard.classList.remove('state-invalid');
+      dropZoneText.textContent = 'Drop proof.json here or click to browse';
+      loadedFileCode.textContent = '';
+      loadedFileName.classList.add('hidden');
+      setErrorBanner(null);
+      setCode(expectedRootCode, null);
+      setCode(computedRootCode, null, { missingText: '— (failed to compute)' });
+      updateCompare(null, null, false);
+      largeFileWarning.classList.remove('show');
+      previewTruncatedBanner.classList.remove('show');
+      preview.textContent = '';
+      merkleViz.innerHTML = '';
+      merkleViz.classList.remove('invalid', 'valid');
+      resultsCard.classList.remove('show', 'fade-out');
+      input.value = '';
+    }, 300);
   });
 
   downloadReport.addEventListener('click', function() {
