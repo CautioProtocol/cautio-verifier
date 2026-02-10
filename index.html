@@ -23,7 +23,6 @@
         
         .icon { font-size: 2.5rem; opacity: 0.8; }
         
-        /* New Elements */
         .verifying-text { margin-top: 1rem; font-weight: 500; color: #475569; font-size: 0.9rem; display: none; }
         .instruction { font-size: 0.8rem; color: #94a3b8; margin-top: 1.5rem; line-height: 1.5; padding: 0 1rem; }
         
@@ -88,15 +87,31 @@
             input.click();
         });
 
+        // Helper: Convert ArrayBuffer to Hex String
+        function bufferToHex(buffer) {
+            return Array.from(new Uint8Array(buffer))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        // Helper: Decode Base64 to ArrayBuffer
+        function base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
         async function verifyProof(file) {
-            // UI Reset
             verifyingText.style.display = 'block';
             verifyingText.textContent = "Analyzing: " + file.name + "...";
             result.className = "status";
             result.textContent = "";
             details.style.display = 'none';
             
-            // Artificial delay for "processing feel"
             await new Promise(r => setTimeout(r, 600));
 
             try {
@@ -108,19 +123,32 @@
                     throw new Error("Invalid JSON file format.");
                 }
 
-                // --- VALIDATION LOGIC ---
-                if (!proof.root) throw new Error("Missing Root Hash. File is not a valid Cautio proof.");
-                
-                // Determine Algorithm (Dynamic)
-                const algo = proof.algorithm || proof.hash || "SHA-256";
+                if (!proof.root) throw new Error("Missing Root Hash.");
+                if (!proof.file_content) throw new Error("Missing File Content (Verification Impossible).");
 
-                // Determine Filename (Smart Fallback)
+                // --- THE BRAIN (REAL CRYPTOGRAPHY) ---
+                // 1. Decode the content
+                const dataBuffer = base64ToArrayBuffer(proof.file_content);
+                
+                // 2. Hash it (SHA-256)
+                const hashBuffer = await crypto.subtle.digest('SHA-256', dataBuffer);
+                const calculatedHash = bufferToHex(hashBuffer);
+
+                // 3. Compare (The Forensic Check)
+                // Note: In a full Merkle tree, we would hash up the path. 
+                // For this demo (proof=[]), the content hash MUST match the root directly.
+                if (calculatedHash !== proof.root) {
+                    throw new Error("TAMPER DETECTED: Content hash does not match Root Hash.");
+                }
+                
+                // --- METADATA DISPLAY ---
+                const algo = proof.algorithm || "SHA-256";
                 let filename = "Verified Record";
                 if (proof.filename) filename = proof.filename;
                 else if (proof.target && proof.target.file) filename = proof.target.file;
                 else if (proof.file_content) filename = "Raw Data Record"; 
 
-                // --- SUCCESS STATE ---
+                // --- SUCCESS ---
                 verifyingText.style.display = 'none';
                 result.innerHTML = "✅ &nbsp; VALID INTEGRITY PROOF";
                 result.className = "status valid show";
@@ -133,7 +161,7 @@
                     <div style="margin-top:8px; color:#166534; font-size:0.8em;">Timestamp Verified • No Tampering Detected</div>
                 `;
             } catch (err) {
-                // --- ERROR STATE ---
+                // --- FAILURE ---
                 verifyingText.style.display = 'none';
                 result.innerHTML = "❌ &nbsp; VERIFICATION FAILED";
                 result.className = "status invalid show";
